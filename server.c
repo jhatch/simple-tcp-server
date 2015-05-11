@@ -15,8 +15,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define BUFSIZE 1024
+#define POOLSIZE 5
 
 #if 0
 /* 
@@ -58,18 +60,70 @@ void error(char *msg) {
   exit(1);
 }
 
+
+
+/*
+ * handle a single conversation - 1 open tcp connection
+ */
+int count = 0;
+pthread_mutex_t lock;
+
+/*
+ * thread safe counter decrement
+ */
+void decrementThreadCount() {
+  pthread_mutex_lock (&lock);
+  count--;
+  pthread_mutex_unlock (&lock);
+}
+
+/*
+ * The actual conversation loop
+ */
+void* converse(void *arg) {
+  int childfd = (int) arg;
+  char buf[BUFSIZE]; // message buffer 
+
+  // conversation loop
+  while (1) {
+
+    // read input string from the client
+    bzero(buf, BUFSIZE);
+    int n = read(childfd, buf, BUFSIZE);
+    if (n < 0) {
+      decrementThreadCount();
+      pthread_exit((void*) close(childfd));
+    }
+
+    // log the incoming data
+    printf("server received %d bytes: %s", n, buf);
+    
+    // send our reply
+    char msg[6];
+    strcpy(msg, "braj\n");
+
+    n = write(childfd, msg, strlen(msg));
+    if (n < 0) {
+      decrementThreadCount();
+      pthread_exit((void*) close(childfd));
+    }
+
+  }
+
+  return NULL;
+}
+
 int main(int argc, char **argv) {
   int parentfd;                   // parent socket 
-  int childfd;                    // child socket 
   int portno;                     // port to listen on 
   int clientlen;                  // byte size of client's address 
   int optval;                     // flag value for setsockopt 
   int n;                          // message byte size 
-  char buf[BUFSIZE];              // message buffer 
   char *hostaddrp;                // dotted decimal host addr string 
   struct hostent *hostp;          // client host info 
   struct sockaddr_in serveraddr;  // server's addr
   struct sockaddr_in clientaddr;  // client addr 
+  pthread_t threads[POOLSIZE];    // 1 thread for each child in the pool
 
   /* 
    * check command line arguments 
@@ -124,12 +178,19 @@ int main(int argc, char **argv) {
     error("ERROR on listen");
   }
 
-  /* 
+  /*
    * main loop: wait for a connection request, echo input line, 
    * then close connection.
    */
   clientlen = sizeof(clientaddr);
+
+  // pthread_lock_init(&lock, NULL);
   while (1) {
+    int childfd;
+
+    if (count >= POOLSIZE) {
+      continue;
+    }
 
     // accept: wait for a connection request 
     childfd = accept(parentfd, (struct sockaddr *) &clientaddr, &clientlen);
@@ -149,30 +210,14 @@ int main(int argc, char **argv) {
     }
 
     // log the request
-    printf("server established connection with %s (%s)\n", hostp->h_name, hostaddrp);
+    // printf("server established connection with %s (%s)\n", hostp->h_name, hostaddrp);
 
-    // start the inner loop for conversations with each incoming connection
-    while (1) {
+    // spawn a thread to handle the conversation, IM style
+    pthread_create(&(threads[count++]), NULL, &converse, (void *) childfd);
 
-      // read: read input string from the client
-      bzero(buf, BUFSIZE);
-      n = read(childfd, buf, BUFSIZE);
-      if (n < 0) {
-        error("ERROR reading from socket");
-      }
-
-      // log the incoming data
-      printf("server received %d bytes: %s", n, buf);
-      
-      // send our reply
-      char msg[5];
-      strcpy(msg, "braj");
-
-      n = write(childfd, msg, strlen(msg));
-      if (n < 0) {
-        error("ERROR writing to socket");
-      }
-    } // end convo loop
   } // end server loop
+
+  pthread_lock_destroy(&count);
+  pthread_exit(NULL);
 }
 
