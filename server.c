@@ -179,12 +179,11 @@ int main(int argc, char **argv) {
   }
 
   /*
-   * main loop: wait for a connection request, echo input line, 
-   * then close connection.
+   * main loop: wait for a connection request, spawn a thread
+   * to handle that conversation
    */
   clientlen = sizeof(clientaddr);
 
-  // pthread_lock_init(&lock, NULL);
   while (1) {
     int childfd;
 
