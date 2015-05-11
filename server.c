@@ -3,6 +3,8 @@
  * usage: tcpserver <port>
  * Based heavily on:
  *   https://www.cs.cmu.edu/afs/cs/academic/class/15213-f99/www/class26/tcpserver.c
+ * My additions: 
+ *   -> use pthreads to manage multiple connections at once, respond with custom message, handle client disconnects
  */
 
 #include <stdio.h>
