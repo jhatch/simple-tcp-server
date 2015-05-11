@@ -6,7 +6,6 @@
  * My additions: 
  *   -> use pthreads to manage multiple connections at once, respond with custom message, handle client disconnects
  */
-
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -62,8 +61,6 @@ void error(char *msg) {
   exit(1);
 }
 
-
-
 /*
  * handle a single conversation - 1 open tcp connection
  */
@@ -71,7 +68,7 @@ int count = 0;
 pthread_mutex_t lock;
 
 /*
- * thread safe counter decrement
+ * thread safe count decrementer
  */
 void decrementThreadCount() {
   pthread_mutex_lock (&lock);
@@ -109,7 +106,6 @@ void* converse(void *arg) {
       decrementThreadCount();
       pthread_exit((void*) close(childfd));
     }
-
   }
 
   return NULL;
@@ -211,7 +207,7 @@ int main(int argc, char **argv) {
     }
 
     // log the request
-    // printf("server established connection with %s (%s)\n", hostp->h_name, hostaddrp);
+    printf("server established connection with %s (%s)\n", hostp->h_name, hostaddrp);
 
     // spawn a thread to handle the conversation, IM style
     pthread_create(&(threads[count++]), NULL, &converse, (void *) childfd);
