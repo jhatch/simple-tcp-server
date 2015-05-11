@@ -1,0 +1,7 @@
+server=server
+rm -rf $server
+gcc $server.c -o $server
+if [ $? -eq 0 ]; then
+  ./$server 8001
+fi
+
