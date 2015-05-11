@@ -1,5 +1,5 @@
 /* 
- * tcpserver.c - A simple TCP echo server 
+ * tcpserver.c - A simple TCP server 
  * usage: tcpserver <port>
  * Based heavily on:
  *   https://www.cs.cmu.edu/afs/cs/academic/class/15213-f99/www/class26/tcpserver.c
